@@ -94,16 +94,45 @@ Name-substring hints are included only as prompts. On this repo they produced **
 uvicorn top_engineers.web.app:app --host 0.0.0.0 --port 8080
 ```
 
-`/healthz` returns **503 on an empty leaderboard**, not 200. An empty leaderboard almost
-always means a misconfigured `TP_DB_PATH`, and that failure is otherwise invisible — the
-container starts fine and serves a blank page forever.
+The health endpoint returns **503 on an empty leaderboard**, not 200. An empty leaderboard
+almost always means a misconfigured `TP_DB_PATH` or a database missing from the image, and that
+failure is otherwise invisible — the container starts fine and serves a blank page forever.
 
 | Route | Purpose |
 |---|---|
 | `/` | Leaderboard + drill-down drawer |
 | `/api/leaderboard` | Ranked list |
 | `/api/person/{login}` | Full metric chain, evidence, how-notes |
-| `/healthz` | Liveness **and** non-emptiness |
+| `/_health` | Liveness **and** non-emptiness |
+| `/healthz` | Same, but **intercepted by Google's frontend on Cloud Run** — use `/_health` |
+
+## Deploying
+
+```bash
+./deploy.sh          # local build + smoke test, then Cloud Build + Cloud Run
+```
+
+Live at **https://top-engineers-693674679836.us-central1.run.app** (project `code-impact-dev`,
+region `us-central1`, `--allow-unauthenticated --min-instances 1`).
+
+Three deployment traps, each of which produced a container that started cleanly and served
+nothing useful:
+
+**`.gcloudignore` must exist.** Without it `gcloud builds submit` falls back to `.gitignore`,
+which excludes `data/*.duckdb` — correctly, it is a build artifact for git — so the database is
+stripped out of the source upload. `deploy.sh` now refuses to run if `.gcloudignore` is missing
+or mentions the database.
+
+**`/healthz` is intercepted by Google's frontend** and returns its own 404 before the request
+reaches the container, which makes the empty-leaderboard guard unreachable in production. Use
+`/_health`.
+
+**A passing local smoke test does not imply a working deploy.** `.dockerignore` and `.gitignore`
+disagree about what ships, so `deploy.sh` verifies the *deployed* URL after rollout rather than
+trusting the local container.
+
+The database ships **gzipped** (19MB vs 111MB, under GitHub's 100MB limit) and the Dockerfile
+decompresses it at build time, so the running container still performs no startup work.
 
 ## Re-running
 
@@ -122,7 +151,7 @@ skipping unchanged PRs) can be added without a full re-fetch.
 ## Tests
 
 ```bash
-pytest -q          # 111 tests
+pytest -q          # 112 tests
 ```
 
 The suite covers the failure modes that cost real time, not just the happy path: `kill -9`

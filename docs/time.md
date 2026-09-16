@@ -1,9 +1,11 @@
 # Where the time went
 
-**Total wall-clock: ~65 minutes**, 11:11 → 12:16 on 2026-09-16 — a single unbroken session,
-from `git init` on an empty directory to a scored leaderboard and a container serving it.
+**Build: ~65 minutes**, 11:11 → 12:16 on 2026-09-16 — a single unbroken session, from
+`git init` on an empty directory to a scored leaderboard and a container serving it.
+**Docs and deployment added ~50 minutes** on top, 12:16 → 14:40, ending with the service live on
+Cloud Run.
 
-Output: **3,296 lines of source**, **1,521 lines of tests** (111 passing), 5,945 PRs
+Output: **3300 lines of source**, **1523 lines of tests** (112 passing), 5,945 PRs
 downloaded, 19MB of byte-stable committed raw.
 
 ## Distribution
@@ -14,7 +16,7 @@ downloaded, 19MB of byte-stable committed raw.
 | Fetch layer (checkpoint, client, limiter, pagination) | 8 min | 12% | `██████` |
 | Metrics & scoring | 11 min | 17% | `████████▌` |
 | UI, storage, serving layer | 7 min | 11% | `█████▌` |
-| Tests (111, written alongside) | 9 min | 14% | `███████` |
+| Tests (112, written alongside) | 9 min | 14% | `███████` |
 | **Production download** | **13 min** | **20%** | `██████████` |
 | Debugging two live bugs | 5 min | 8% | `████` |
 | Docs, Docker, deploy scaffolding | 2 min | 3% | `█▌` |
@@ -84,6 +86,28 @@ band. Rank 1 `[0.637,0.766]` and rank 50 `[0.051,0.368]` shared a band despite n
 Fixed by anchoring on the band leader: 3 real bands.
 
 Both now have regression tests.
+
+## The deployment tail (~50 min)
+
+Documentation and deployment took roughly as long as they usually do, and for an unusual reason:
+**three configuration files disagreed about which artifact ships.**
+
+| | |
+|---|---|
+| Docs (6 files, ~15k words) | ~20 min |
+| Deploy debugging | ~20 min |
+| Builds and uploads (waiting) | ~10 min |
+
+Four failures, in order: Cloud Build's default service account lacked `storage.objects.get`;
+a direct 358MB image push was too slow and was abandoned for a 19MB source build;
+`gcloud builds submit` fell back to `.gitignore` and stripped the database out of the upload;
+and `/healthz` turned out to be intercepted by Google's frontend, making the empty-leaderboard
+guard unreachable at the path it was published on.
+
+The third is the one worth remembering. The local Docker smoke test passed while the deploy was
+broken, because `.dockerignore` and `.gitignore` make opposite decisions about `data/*.duckdb`.
+A build that verifies a different artifact than it deploys is not a verification — so
+`deploy.sh` now checks the deployed URL after rollout.
 
 ## What was skipped, and what it saved
 

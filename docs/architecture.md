@@ -197,8 +197,21 @@ fetch and no cold-start download.
 `TP_DATA_DIR` / `TP_DB_PATH` are set in the Dockerfile and are **not optional**. Deriving the
 path from `__file__.parents[2]` resolves to `/usr/local/lib/python3.12` once pip-installed —
 verified in-container — which contains no data directory. The container then starts fine and
-serves an empty leaderboard forever. `/healthz` returns 503 on an empty leaderboard so that
-failure is loud.
+serves an empty leaderboard forever. The health endpoint returns 503 on an empty leaderboard so
+that failure is loud — served on **`/_health`**, because Google's frontend intercepts `/healthz`
+on Cloud Run and answers it with its own 404 before the container ever sees the request, which
+made the guard unreachable in exactly the environment it was written for.
 
-`deploy.sh` builds locally and smoke-tests `/healthz` **before** `gcloud builds submit`,
-because that catches path bugs for free.
+The same class of bug bit twice more. `gcloud builds submit` falls back to `.gitignore` when no
+`.gcloudignore` exists, and `.gitignore` excludes `data/*.duckdb`, so the first deploy shipped
+without a database. And the local Docker smoke test passed while that deploy was broken, because
+`.dockerignore` and `.gitignore` disagree about what ships.
+
+The conclusion generalizes: **a build that verifies a different artifact than it deploys is not
+a verification.** `deploy.sh` still builds and smoke-tests locally first, because that catches
+path bugs for free, but it now also fails fast if `.gcloudignore` is missing and verifies the
+*deployed* URL after rollout.
+
+The database is committed **gzipped** — 19MB against 111MB raw, which exceeds GitHub's 100MB
+hard limit — with `mtime=0` for the same determinism as the raw files. The Dockerfile
+decompresses it at build time and asserts the leaderboard is non-empty.

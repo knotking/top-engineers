@@ -1133,7 +1133,7 @@ they qualify.
 Two genuine bugs reached production. Both were in code the test suite passed. Both were found by
 **looking at output**, not by the tests.
 
-That is worth recording without spin. The 111 tests caught expectation errors, regressions, and
+That is worth recording without spin. The 112 tests caught expectation errors, regressions, and
 every failure mode I thought to imagine. They did not anticipate a throttle-report storm, and
 they did not anticipate transitive closure in band assignment — because both bugs were failures
 of *specification*, not implementation. The code did exactly what I told it to; what I told it
@@ -1142,6 +1142,22 @@ was subtly wrong.
 What the tests did provide was the confidence to fix both in minutes rather than hours, and the
 resume path that turned the first bug's damage from a 9-minute re-download into a 15-second
 restart.
+
+Deployment then produced a third instance of the same pattern, and it is the cleanest example in
+the project. `gcloud builds submit` falls back to `.gitignore` when no `.gcloudignore` exists.
+`.gitignore` excludes `data/*.duckdb` — correctly, since it is a build artifact for git — so the
+database was stripped from the source upload and the container shipped without it. The local
+Docker build had passed, because `.dockerignore` makes the opposite choice.
+
+The container then started cleanly, logged `Application startup complete`, and served a 503. It
+served a 503 rather than a blank page only because the health endpoint asserts the leaderboard is
+non-empty — the guard written specifically against this failure, catching it in the one
+environment that could produce it. And it was very nearly missed anyway: Google's frontend
+intercepts `/healthz` on Cloud Run and returns its own 404 before the request reaches the
+container, so the guard was unreachable at the exact path it was published on.
+
+Three separate configuration files disagreeing about which artifact ships, and one health check
+standing between that and a leaderboard that looked fine and contained nothing.
 
 The pattern common to both: **neither produced an error.** The cascade made the run slow; the
 band bug made the output uniform. Systems that fail loudly get fixed. Systems that degrade

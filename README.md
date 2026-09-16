@@ -3,6 +3,8 @@
 Ranks engineers in [PostHog/posthog](https://github.com/PostHog/posthog) on **how** their
 fix/bug work landed — not how much of it there was — over a rolling 90-day window.
 
+**Live: https://top-engineers-693674679836.us-central1.run.app**
+
 No volume metrics are scored. PR count, cycle time and lines changed all reward agent
 throughput, and on this repo one account authored **1,285 PRs in 90 days, 90% of them
 self-declared fully autonomous**. A volume leaderboard crowns that account; this one does not.
@@ -67,8 +69,10 @@ for how it works and why.
 | Skimmed / hydrated | 5,945 / 5,136 PRs |
 | Fetch cost | ~1,550 of 5,000 points — **one rate-limit window** |
 | Autonomy | 62.3% agent-assisted · 23.2% fully autonomous · 14.5% undeclared |
-| Tests | 111 |
+| Tests | 112 |
 | Committed raw | 19MB, byte-stable, rebuilds the database via `top-engineers restore` |
+| Committed database | 19MB gzipped (111MB raw — over GitHub's 100MB limit) |
+| Deployment | Cloud Run, `code-impact-dev`, DB baked into the image |
 
 ## Caveats
 
