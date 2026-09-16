@@ -69,8 +69,10 @@ def client(tmp_path, monkeypatch):
     return TestClient(appmod.app)
 
 
-def test_healthz_ok_when_leaderboard_populated(client):
-    r = client.get("/healthz")
+@pytest.mark.parametrize("path", ["/healthz", "/_health"])
+def test_health_ok_when_leaderboard_populated(client, path):
+    """Both paths must work: Cloud Run's frontend intercepts /healthz."""
+    r = client.get(path)
     assert r.status_code == 200
     assert r.json()["ok"] is True
     assert r.json()["leaderboard_rows"] > 0
@@ -122,6 +124,6 @@ def test_empty_database_fails_health_loudly(tmp_path, monkeypatch):
 
     appmod._con = None
     c = TestClient(appmod.app)
-    r = c.get("/healthz")
+    r = c.get("/_health")
     assert r.status_code == 503
     assert r.json()["ok"] is False

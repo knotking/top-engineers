@@ -72,15 +72,90 @@
   .cav span { color:var(--muted); }
   .sect { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
           margin:20px 0 9px; }
+  /* header + how-to-use */
+  .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
+            flex-wrap:wrap; }
+  .howto-btn { flex:none; background:var(--panel); color:var(--ink); border:1px solid var(--line);
+               border-radius:9px; padding:8px 14px; font-size:13px; font-weight:600;
+               cursor:pointer; transition:.15s; display:inline-flex; align-items:center; gap:7px; }
+  .howto-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .howto { display:none; background:var(--panel); border:1px solid var(--line);
+           border-radius:12px; padding:20px 22px; margin:0 0 26px; }
+  .howto.open { display:block; }
+  .howto h2 { font-size:13px; margin:0 0 14px; text-transform:uppercase; letter-spacing:.06em;
+              color:var(--muted); }
+  .howto ol { margin:0 0 16px; padding-left:20px; }
+  .howto li { margin-bottom:9px; font-size:13.5px; }
+  .howto .key { display:grid; grid-template-columns:minmax(120px,auto) 1fr; gap:7px 14px;
+                font-size:13px; border-top:1px solid var(--line); padding-top:14px; }
+  .howto .key dt { font-weight:600; }
+  .howto .key dd { margin:0; color:var(--muted); }
+  .howto code { background:var(--panel2); border:1px solid var(--line); border-radius:4px;
+                padding:1px 5px; font-size:12px; }
+  .howto .warn { margin-top:14px; padding:11px 13px; border-left:3px solid var(--accent);
+                 background:var(--panel2); border-radius:0 8px 8px 0; font-size:13px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Top engineers</h1>
-  <div class="sub">
-    PostHog/posthog &middot; fix &amp; bug PRs &middot; {{ meta.get('window','') }}
-    &middot; ranks within a {{ meta.get('normalise_pool','?') }}-person normalisation pool,
-    showing {{ meta.get('display_size','10') }}
+  <div class="topbar">
+    <div>
+      <h1>Top engineers</h1>
+      <div class="sub">
+        PostHog/posthog &middot; fix &amp; bug PRs &middot; {{ meta.get('window','') }}
+        &middot; ranks within a {{ meta.get('normalise_pool','?') }}-person normalisation pool,
+        showing {{ meta.get('display_size','10') }}
+      </div>
+    </div>
+    <button class="howto-btn" onclick="toggleHowto()" aria-expanded="false" id="howto-btn">
+      <span>?</span> How to use
+    </button>
+  </div>
+
+  <div class="howto" id="howto">
+    <h2>How to read this page</h2>
+    <ol>
+      <li><b>Click any card or row</b> to open the drill-down. Every scored metric shows its full
+          arithmetic &mdash; <code>raw &rarr; winsorized &rarr; shrunk &rarr; percentile &times;
+          weight = contribution</code> &mdash; so a rank can be checked, not just read.</li>
+      <li><b>Read the band before the rank.</b> People in the same tie band are
+          <i>statistically indistinguishable</i>. This data supports 3 bands, not a 1-to-50
+          ordering &mdash; #4 is not meaningfully ahead of #9 if they share a band.</li>
+      <li><b>Open <code>&#9432; how</code></b> on any metric to see how it is computed, including
+          what was excluded from the denominator. A number whose denominator is hidden cannot be
+          argued with.</li>
+      <li><b>Check the evidence links.</b> They deliberately favour PRs that explain a
+          <i>bad</i> score &mdash; the reverted change, the 4,000-line diff, the approval with no
+          comment. Those are the ones worth discussing.</li>
+      <li><b>Scored vs Context.</b> Only 9 metrics affect the score. The other 24 &mdash; PR
+          count, cycle time, size &mdash; are shown because they are informative, and carry
+          zero weight because they reward volume.</li>
+    </ol>
+    <dl class="key">
+      <dt>Score</dt>
+      <dd>0&ndash;1, weighted across Builder 45% / Reviewer 40% / Balance 15%. Higher is better.</dd>
+      <dt>Interval</dt>
+      <dd>Uncertainty range. Wide means a small sample &mdash; treat the score as provisional.</dd>
+      <dt>Band</dt>
+      <dd>Tie band. Same band = the data cannot separate these people.</dd>
+      <dt>Authored</dt>
+      <dd>Fix/bug PRs this person wrote themselves.</dd>
+      <dt>Reviewed</dt>
+      <dd>PRs they reviewed for someone else.</dd>
+      <dt>Dispatched</dt>
+      <dd>PRs self-declared <i>Fully autonomous</i>. <b>Excluded</b> from builder scoring &mdash;
+          dispatched, not authored &mdash; but shown, because excluded is not the same as
+          did-not-happen.</dd>
+      <dt><code>&mdash;</code></dt>
+      <dd>Below the gate (5 merged PRs / 10 reviews). Metrics are still computed and shown; only
+          the rank is withheld.</dd>
+    </dl>
+    <div class="warn">
+      <b>This is a conversation starter, not a performance verdict.</b> The cohort was selected
+      by volume and then judged on non-volume metrics; only fix/bug PRs are in scope. It cannot
+      see design work, mentoring, incident response, or anything that never became a pull
+      request. Read the full caveats at the bottom of the page.
+    </div>
   </div>
 
   <div class="cards">
@@ -186,6 +261,14 @@ function openDrawer(login) {
 
   document.getElementById('drawer').classList.add('open');
   document.getElementById('scrim').classList.add('open');
+}
+
+function toggleHowto() {
+  const panel = document.getElementById('howto');
+  const btn = document.getElementById('howto-btn');
+  const open = panel.classList.toggle('open');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
 
 function closeDrawer() {

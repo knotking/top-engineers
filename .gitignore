@@ -6,6 +6,9 @@ __pycache__/
 
 # Scratch checkpoints are append-only and NOT byte-stable (see docs/plan/readme.md §2).
 data/checkpoint/
-# The DuckDB file is a build artifact; rebuild it from committed raw via load-from-raw.
+# The uncompressed DuckDB file is a build artifact (111 MB, over GitHub's 100 MB limit).
+# The gzipped form IS committed -- 19 MB, deterministic (mtime=0) -- so a clone has a
+# ready-to-serve database without re-fetching, and Cloud Build uploads 19 MB not 117 MB.
 data/*.duckdb
 data/*.duckdb.wal
+!data/*.duckdb.gz

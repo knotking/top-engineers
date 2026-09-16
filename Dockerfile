@@ -8,9 +8,18 @@ COPY pyproject.toml ./
 COPY src/ ./src/
 RUN pip install --no-cache-dir .
 
-# The DuckDB file and the committed raw that can rebuild it.
+# The committed raw plus the gzipped DuckDB. The database ships compressed (19 MB vs 111 MB)
+# because GitHub rejects files over 100 MB -- and as a bonus the Cloud Build source upload
+# drops from 117 MB to 19 MB.
 COPY data/ ./data/
 COPY actors.yaml ./actors.yaml
+
+# Decompress at BUILD time, not at startup: the data is static per run, so the running
+# container must never do work or touch the network to serve its first request.
+RUN gunzip -kf data/top_engineers.duckdb.gz \
+    && python -c "import duckdb; c=duckdb.connect('data/top_engineers.duckdb', read_only=True); \
+        n=c.execute('SELECT count(*) FROM serving_leaderboard').fetchone()[0]; \
+        assert n > 0, 'leaderboard is empty'; print(f'baked-in DB verified: {n} rows')"
 
 # WITHOUT THESE the container starts fine and serves an EMPTY LEADERBOARD FOREVER.
 # config.DB_PATH must never be derived from __file__.parents[2] -- once pip-installed that

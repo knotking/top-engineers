@@ -43,6 +43,10 @@ def rows(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
     return [dict(zip(cols, r)) for r in cur.fetchall()]
 
 
+# Two paths on purpose: Google's frontend intercepts /healthz on Cloud Run and returns its
+# own 404 before the request reaches the container, which makes the empty-leaderboard guard
+# below unreachable in production -- the exact failure it exists to catch.
+@app.get("/_health")
 @app.get("/healthz")
 def healthz() -> JSONResponse:
     try:
