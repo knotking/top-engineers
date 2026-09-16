@@ -1,0 +1,17 @@
+# WITHOUT THIS FILE, gcloud falls back to .gitignore -- which excludes data/*.duckdb,
+# strips the database out of the source upload, and produces a container that starts
+# cleanly and serves an EMPTY LEADERBOARD. (/healthz returns 503 on that, which is how it
+# was caught, but the fix belongs here.)
+#
+# The DuckDB file is a build artifact for git and a REQUIRED INPUT for the image.
+.git/
+.gitignore
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+data/checkpoint/
+tests/
+docs/

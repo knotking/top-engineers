@@ -7,7 +7,7 @@ set -euo pipefail
 PROJECT="${TP_PROJECT:-code-impact-dev}"
 SERVICE="${TP_SERVICE:-top-engineers}"
 REGION="${TP_REGION:-us-central1}"
-IMAGE="gcr.io/${PROJECT}/${SERVICE}"
+IMAGE="us-central1-docker.pkg.dev/${PROJECT}/${SERVICE}/app:latest"
 
 echo "==> local build (catches path bugs before paying for a cloud build)"
 docker build -t "${IMAGE}:local" .
@@ -24,8 +24,13 @@ echo "    healthz: ${body}"
 echo "${body}" | grep -q '"ok": *true' || { echo "!! empty leaderboard -- check TP_DB_PATH"; exit 1; }
 docker rm -f "$cid" >/dev/null; trap - EXIT
 
+# .gcloudignore must exist. Without it gcloud falls back to .gitignore, which excludes
+# data/*.duckdb -- the container then starts cleanly and serves an EMPTY LEADERBOARD.
+[ -f .gcloudignore ] || { echo "!! .gcloudignore missing; the DB would be stripped"; exit 1; }
+grep -q duckdb .gcloudignore && { echo "!! .gcloudignore excludes the DB"; exit 1; }
+
 echo "==> cloud build + deploy"
-gcloud builds submit --tag "${IMAGE}" --project "${PROJECT}"
+gcloud builds submit --tag "${IMAGE}" --project "${PROJECT}" --region "${REGION}"
 gcloud run deploy "${SERVICE}" \
   --image "${IMAGE}" \
   --project "${PROJECT}" \
@@ -33,4 +38,12 @@ gcloud run deploy "${SERVICE}" \
   --platform managed \
   --allow-unauthenticated \
   --min-instances 1 \
-  --memory 1Gi
+  --memory 1Gi \
+  --port 8080
+
+URL=$(gcloud run services describe "${SERVICE}" --project "${PROJECT}" --region "${REGION}" \
+      --format="value(status.url)")
+echo "==> verifying the DEPLOYED service actually has data"
+curl -fsS "${URL}/healthz" | grep -q '"ok":true' \
+  || { echo "!! deployed service has an empty leaderboard -- check .gcloudignore"; exit 1; }
+echo "    live: ${URL}"
