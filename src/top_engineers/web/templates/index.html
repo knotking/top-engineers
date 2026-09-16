@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top engineers &middot; PostHog</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --ink:#e8eaed; --muted:#9aa3b2; --accent:#f7a501; --good:#3fb950; --bad:#f85149;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f6f7f9; --panel:#fff; --panel2:#f0f2f5; --line:#dfe3e8;
+            --ink:#1b1f27; --muted:#5b6676; --accent:#b97900; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; }
+  .wrap { max-width:1080px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:-.02em; }
+  .sub { color:var(--muted); font-size:14px; margin-bottom:26px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:14px; margin-bottom:30px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px;
+          padding:18px; text-align:center; cursor:pointer; transition:.15s; }
+  .card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .card img { width:72px; height:72px; border-radius:50%; background:var(--panel2); }
+  .card .who { font-weight:600; margin-top:10px; }
+  .card .sc { font-size:22px; font-weight:700; color:var(--accent); margin-top:6px; }
+  .card .band { font-size:11px; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; background:var(--panel);
+          border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  th,td { padding:11px 13px; text-align:left; border-bottom:1px solid var(--line); font-size:14px; }
+  th { background:var(--panel2); color:var(--muted); font-size:11px; text-transform:uppercase;
+       letter-spacing:.06em; font-weight:600; }
+  tr:last-child td { border-bottom:none; }
+  tr.row { cursor:pointer; }
+  tr.row:hover td { background:var(--panel2); }
+  .avatar-sm { width:26px; height:26px; border-radius:50%; vertical-align:middle; margin-right:9px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:11px;
+          background:var(--panel2); color:var(--muted); border:1px solid var(--line); }
+  .scrollx { overflow-x:auto; }
+  /* drawer */
+  .drawer { position:fixed; top:0; right:0; width:min(680px,100%); height:100%;
+            background:var(--panel); border-left:1px solid var(--line);
+            transform:translateX(100%); transition:.22s; overflow-y:auto; z-index:50; padding:26px; }
+  .drawer.open { transform:none; }
+  .scrim { position:fixed; inset:0; background:#0009; opacity:0; pointer-events:none;
+           transition:.22s; z-index:40; }
+  .scrim.open { opacity:1; pointer-events:auto; }
+  .close { float:right; background:none; border:1px solid var(--line); color:var(--muted);
+           border-radius:8px; cursor:pointer; padding:5px 11px; }
+  .mrow { border:1px solid var(--line); border-radius:10px; padding:13px; margin-bottom:9px;
+          background:var(--panel2); }
+  .mhead { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .mval { font-weight:700; font-size:17px; }
+  .how { color:var(--muted); font-size:12.5px; margin-top:9px; display:none;
+         border-left:2px solid var(--accent); padding-left:10px; }
+  .how.show { display:block; }
+  .howbtn { background:none; border:none; color:var(--accent); cursor:pointer;
+            font-size:12px; padding:0; margin-top:7px; }
+  .chain { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px;
+           color:var(--muted); margin-top:8px; overflow-x:auto; white-space:nowrap; }
+  .ev { font-size:12.5px; padding:7px 0; border-top:1px solid var(--line); }
+  .ev a { color:var(--accent); text-decoration:none; }
+  .adverse { color:var(--bad); }
+  .caveats { margin-top:34px; background:var(--panel); border:1px solid var(--line);
+             border-radius:12px; padding:20px; }
+  .caveats h2 { font-size:14px; margin:0 0 12px; text-transform:uppercase;
+                letter-spacing:.06em; color:var(--muted); }
+  .cav { margin-bottom:13px; font-size:13px; }
+  .cav b { display:block; margin-bottom:2px; }
+  .cav span { color:var(--muted); }
+  .sect { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+          margin:20px 0 9px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Top engineers</h1>
+  <div class="sub">
+    PostHog/posthog &middot; fix &amp; bug PRs &middot; {{ meta.get('window','') }}
+    &middot; ranks within a {{ meta.get('normalise_pool','?') }}-person normalisation pool,
+    showing {{ meta.get('display_size','10') }}
+  </div>
+
+  <div class="cards">
+    {% for p in top5 %}
+    <div class="card" onclick="openDrawer('{{ p.login }}')">
+      <img src="{{ p.avatar_url }}" alt="" loading="lazy">
+      <div class="who">{{ p.login }}</div>
+      <div class="sc">{{ '%.3f'|format(p.score) }}</div>
+      <div class="band">#{{ p.rank }} &middot; tie band {{ p.tie_band }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="scrollx">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Band</th><th>Engineer</th><th>Score</th><th>Interval</th>
+      <th>Builder</th><th>Reviewer</th><th>Balance</th><th>Authored</th><th>Reviewed</th><th>Dispatched</th>
+    </tr></thead>
+    <tbody>
+    {% for p in board %}
+      <tr class="row" onclick="openDrawer('{{ p.login }}')">
+        <td>{{ p.rank }}</td>
+        <td><span class="pill">{{ p.tie_band }}</span></td>
+        <td><img class="avatar-sm" src="{{ p.avatar_url }}" alt="" loading="lazy">{{ p.login }}</td>
+        <td><b>{{ '%.3f'|format(p.score) }}</b></td>
+        <td class="pill">{{ '%.2f'|format(p.ci_low) }}–{{ '%.2f'|format(p.ci_high) }}</td>
+        <td>{{ '%.2f'|format(p.builder_score) if p.builder_score is not none else '—' }}</td>
+        <td>{{ '%.2f'|format(p.reviewer_score) if p.reviewer_score is not none else '—' }}</td>
+        <td>{{ '%.2f'|format(p.cross_score) if p.cross_score is not none else '—' }}</td>
+        <td>{{ p.authored_n }}</td>
+        <td>{{ p.reviewed_n }}</td>
+        <td>{{ p.dispatched_n or 0 }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <div class="caveats">
+    <h2>Read this before using these numbers</h2>
+    {% for c in caveats %}
+      <div class="cav"><b>{{ c.title }}</b><span>{{ c.body }}</span></div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer"><div id="drawer-body"></div></div>
+
+<script>
+const DETAIL = {{ detail_json|safe }};
+
+function fmt(x, d=3) { return (x===null||x===undefined) ? '—' : Number(x).toFixed(d); }
+
+function chainLine(m) {
+  if (!m.scored) return '';
+  return `raw ${fmt(m.raw)} → winsorized ${fmt(m.winsorized)} → shrunk ${fmt(m.shrunk)} ` +
+         `→ percentile ${fmt(m.percentile)} × weight ${fmt(m.weight)} = ${fmt(m.contribution)}`;
+}
+
+function openDrawer(login) {
+  const d = DETAIL[login];
+  if (!d) return;
+  const scored  = d.metrics.filter(m => m.scored);
+  const context = d.metrics.filter(m => !m.scored);
+  const evByMetric = {};
+  d.evidence.forEach(e => { (evByMetric[e.metric] ||= []).push(e); });
+
+  const renderMetric = (m) => `
+    <div class="mrow">
+      <div class="mhead">
+        <div><b>${m.label}</b> <span class="pill">n=${m.n ?? 0}</span></div>
+        <div class="mval">${m.display_value}</div>
+      </div>
+      ${m.scored ? `<div class="chain">${chainLine(m)}</div>` : ''}
+      <button class="howbtn" onclick="this.nextElementSibling.classList.toggle('show')">ⓘ how</button>
+      <div class="how">${m.how_note || ''}</div>
+      ${(evByMetric[m.metric]||[]).map(e => `
+        <div class="ev ${e.is_adverse ? 'adverse' : ''}">
+          <a href="${e.url}" target="_blank" rel="noopener">#${e.pr_number}</a>
+          ${e.reason} — ${(e.title||'').slice(0,80)}
+        </div>`).join('')}
+    </div>`;
+
+  document.getElementById('drawer-body').innerHTML = `
+    <button class="close" onclick="closeDrawer()">esc</button>
+    <h2 style="margin:0 0 4px">${login}</h2>
+    <div class="sub">
+      rank ${d.person.rank} · tie band ${d.person.tie_band} ·
+      score ${fmt(d.person.score)} [${fmt(d.person.ci_low,2)}–${fmt(d.person.ci_high,2)}]
+    </div>
+    <div class="sub">
+      authored ${d.person.authored_n} · reviewed ${d.person.reviewed_n} ·
+      dispatched ${d.person.dispatched_n || 0}
+      ${d.person.builder_eligible ? '' : ' · <span class="adverse">below builder gate</span>'}
+      ${d.person.reviewer_eligible ? '' : ' · <span class="adverse">below reviewer gate</span>'}
+    </div>
+    <div class="sect">Scored (${scored.length})</div>
+    ${scored.map(renderMetric).join('')}
+    <div class="sect">Context only — not scored (${context.length})</div>
+    ${context.map(renderMetric).join('')}`;
+
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('scrim').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('scrim').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+</script>
+</body>
+</html>

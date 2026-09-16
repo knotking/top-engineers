@@ -1,0 +1,26 @@
+# HUMAN-REVIEWED identity artifact. Not generated; not a helper function.
+#
+# Why this file exists: the `[bot]` suffix and GitHub's `Bot` account type miss the real
+# cases. `stamphog` is a USER account posting automated approvals detailed enough to top
+# every reviewer-quality metric. Only a human can catch that, so only a human edits this.
+#
+# Substring nets ("bot", "ci", "hog") produced 10 flags and 10 false positives -- all real
+# employees. Never promote an entry on a name hint alone; open the profile and check.
+#
+# Run `top-engineers candidates` to regenerate actors.candidates.yaml as a review queue.
+
+bots:
+  # Measured in-window 2026-09-16. App accounts need the `app/` prefix in SEARCH, but appear
+  # here under their bare login, which is what the API returns in `author.login`.
+  - posthog-js-upgrader        # 165 PRs in window
+  - scheduled-actions-posthog  # 108 PRs in window
+  - posthog-bot
+  - dependabot
+  - github-actions
+  # `stamphog` is deliberately NOT listed: it needs a human to confirm whether its approvals
+  # are automated before it is excluded from reviewer metrics. Add it once verified.
+
+humans: []
+
+# Map alternate logins onto one canonical identity.
+aliases: {}

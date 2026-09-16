@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Scratch checkpoints are append-only and NOT byte-stable (see docs/plan/readme.md §2).
+data/checkpoint/
+# The DuckDB file is a build artifact; rebuild it from committed raw via load-from-raw.
+data/*.duckdb
+data/*.duckdb.wal
